@@ -1,0 +1,512 @@
+# if this outfile gets set to none, then the netcdf is not written to disk
+outfile = None
+# a0_sample = a0_samples[:, n][0]
+kdvargs = dict(verbose=False,\
+a0=a0_sample,\
+Lw=None,\
+eigen_mode=eigen_mode,\
+Cmax=0.8,\
+dt=20.,\
+nu_H=0.0,\
+ekdv=False,\
+wavefunc=doublesine,\
+L_d = L_d,\
+Nx = int(np.ceil(2*L_d/dx)),\
+Ricr=2.0,\
+k_diss=1.0)
+omega = 2*np.pi/(12.42*3600)
+k = omega/iw_modes_output.c1
+Lw = 2*np.pi/k
+kdvargs['Lw'] = Lw
+kdvargs['x0'] = -1.5*Lw
+# initalise the solver object
+mykdv0 = kdv.KdV(iw_modes_output.rhoZ, iw_modes_output.Z, **kdvargs)
+## don't know why making a new dictionary and passing that to the kdv.KdV
+## function doens't work.???????
+## Just change the eigen mode bit and see
+# new_kdvargs = dict(verbose=False,\
+#   a0=a0_sample,\
+#   Lw=None,\
+#   eigen_mode=1,\
+#   Cmax=0.8,\
+#   dt=20.,\
+#   nu_H=0.0,\
+#   ekdv=False,\
+#   wavefunc=doublesine,\
+#   L_d = L_d,\
+#   Nx = int(np.ceil(2*L_d/dx)),\
+#   Ricr=2.0,\
+#   k_diss=1.0)
+kdvargs['eigen_mode'] = 1
+mykdv1 = kdv.KdV(iw_modes_output.rhoZ, iw_modes_output.Z, **kdvargs)
+result = {'bou_freq' : mykdv0.N2, 'phi_1' : mykdv0.phi_1, 'z_new' : z_new, 'phi_2' : mykdv1.phi_1}
+# print(z_new[0])
+return(result)
+quit
+beta_file <- hdf5r::h5file("../beta-samples-array-all-data.h5")
+beta_samples <- beta_file[["data/beta_samples"]][, ,]
+beta_file <- hdf5r::h5file("../beta-samples-array-all-data.h5")
+beta_file <- hdf5r::H5File("../beta-samples-array-all-data.h5")
+beta_file <- hdf5r::H5File$new("../beta-samples-array-all-data.h5", mode = "r")
+beta_samples <- beta_file[["data/beta_samples"]][, ,]
+beta_file
+names(beta_file)
+# check
+all(output_array[, , 1] == output_list$beta_zero)
+getwd()
+beta_file <- hdf5r::H5File$new("../beta-samples-array-all-data.h5", mode = "r")
+beta_samples <- beta_file[["data/beta_samples"]][, ,]
+beta_file
+beta_file$names
+beta_file <- hdf5r::H5File$new("../beta-samples-array-all-data.h5", mode = "r+")
+names(beta_file)
+str(beta_file)
+beta_file$ls()
+beta_file$name
+beta_file <- hdf5r::h5file("../beta-samples-array-all-data.h5")
+beta_samples <- beta_file[["data/beta_samples"]][, ,]
+beta_file <- hdf5r::h5file("../beta-samples-array-all-data.h5")
+beta_samples <- beta_file[["data/beta_samples"]][, ,]
+getwd()
+setwd("./figure_3-4-5/")
+beta_file <- hdf5r::h5file("../beta-samples-array-all-data.h5")
+beta_samples <- beta_file[["data/beta_samples"]][, ,]
+# because of the truncation, the points are all wacky.
+time_points_of_interest <- as.numeric(rownames(a0_data_no_zeros))[c(22, 464, 642)]
+z_new <- seq(from = -252.5, to = 0, by = 0.5)
+a0_const <- 0.1 # does nothing
+curve_samples <- lapply(as.list(time_points_of_interest), function(x) {
+apply(beta_samples[, x, ], 1, function(q) {
+ddcurves2:::.double_tanh_function(z = z_new, beta = q)
+})
+library(pbapply)
+py$calc_phi_and_n2(0.15, beta_sample = beta_samples[2, 27, ])
+gc()
+library(reticulate)
+use_virtualenv("r-reticulate")
+options(error = traceback)
+# py_install("scipy")
+# py_install(c("matplotlib", "xarray", "gsw"))
+library(hdf5r)
+library(ggplot2)
+library(ddcurves2)
+library(gridExtra)
+library(magrittr)
+library(dplyr)
+reticulate::repl_python()
+import sys
+# replace the  following with your path(s?) to the iwaves package
+sys.path.append("C:\\Users\\21134926\\Google Drive\\Work\\soli_modelling\\solver\\")
+sys.path.append("C:\\Users\\21134926\\Google Drive\\Work\\soli_modelling\\solver\\iwaves")
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+from iwaves.kdv.kdv import  KdV
+from iwaves.kdv.kdvimex import  KdVImEx as KdV
+from iwaves.utils import density as density
+from iwaves import IWaveModes
+from iwaves import kdv, solve_kdv
+from iwaves.utils.viewer import viewer
+import h5py
+# from scipy.signal import find_peaks
+from multiprocessing import Pool, TimeoutError
+from time import gmtime, strftime
+import os
+def double_tanh(z, beta):
+z = np.asarray(z)
+beta = np.asarray(beta)
+#print(z, beta)
+res = beta[0] - beta[1] * (np.tanh((z + beta[2]) / beta[3]) + np.tanh((z + beta[4]) / beta[5]))
+return(res)
+def doublesine(x, a_0, L_w, x0=0.):
+k = 2*np.pi/L_w
+k2 = 2*k
+eta =  - a_0 * np.cos(k*x + k*x0 + np.pi/2)
+eta +=  a_0/4. * np.cos(k2*x + k2*x0 + np.pi/2)
+eta[x>x0+3*L_w/2] = 0.
+#eta[x<x0-4*L_w/2] = 0.
+eta[x<x0-L_w/2] = 0.
+return eta
+def calc_phi_and_n2(a0_sample, beta_sample):
+dz = 0.5
+zmax = -252.5
+z_new = np.linspace(zmax, 0, num = int(abs(zmax/dz)))
+beta_sample = np.asarray(beta_sample)
+profile_sample = double_tanh(z_new, beta_sample)
+iw_modes_output = IWaveModes(profile_sample, z_new, density_class=density.FitDensity, density_func='double_tanh')
+phi, c, he, zout = iw_modes_output(zmax, dz, 0)
+# more runtime parameters
+dx = 50.
+L_d = 3.2e5
+eigen_mode = 0
+runtime = 1.5*86400.
+ntout = 1800.
+# if this outfile gets set to none, then the netcdf is not written to disk
+outfile = None
+# a0_sample = a0_samples[:, n][0]
+kdvargs = dict(verbose=False,\
+a0=a0_sample,\
+Lw=None,\
+eigen_mode=eigen_mode,\
+Cmax=0.8,\
+dt=20.,\
+nu_H=0.0,\
+ekdv=False,\
+wavefunc=doublesine,\
+L_d = L_d,\
+Nx = int(np.ceil(2*L_d/dx)),\
+Ricr=2.0,\
+k_diss=1.0)
+omega = 2*np.pi/(12.42*3600)
+k = omega/iw_modes_output.c1
+Lw = 2*np.pi/k
+kdvargs['Lw'] = Lw
+kdvargs['x0'] = -1.5*Lw
+# initalise the solver object
+mykdv0 = kdv.KdV(iw_modes_output.rhoZ, iw_modes_output.Z, **kdvargs)
+## don't know why making a new dictionary and passing that to the kdv.KdV
+## function doens't work.???????
+## Just change the eigen mode bit and see
+# new_kdvargs = dict(verbose=False,\
+#   a0=a0_sample,\
+#   Lw=None,\
+#   eigen_mode=1,\
+#   Cmax=0.8,\
+#   dt=20.,\
+#   nu_H=0.0,\
+#   ekdv=False,\
+#   wavefunc=doublesine,\
+#   L_d = L_d,\
+#   Nx = int(np.ceil(2*L_d/dx)),\
+#   Ricr=2.0,\
+#   k_diss=1.0)
+kdvargs['eigen_mode'] = 1
+mykdv1 = kdv.KdV(iw_modes_output.rhoZ, iw_modes_output.Z, **kdvargs)
+result = {'bou_freq' : mykdv0.N2, 'phi_1' : mykdv0.phi_1, 'z_new' : z_new, 'phi_2' : mykdv1.phi_1}
+# print(z_new[0])
+return(result)
+quit
+beta_file <- hdf5r::h5file("../beta-samples-array-all-data.h5")
+beta_samples <- beta_file[["data/beta_samples"]][, ,]
+# because of the truncation, the points are all wacky.
+time_points_of_interest <- as.numeric(rownames(a0_data_no_zeros))[c(22, 464, 642)]
+z_new <- seq(from = -252.5, to = 0, by = 0.5)
+a0_const <- 0.1 # does nothing
+curve_samples <- lapply(as.list(time_points_of_interest), function(x) {
+apply(beta_samples[, x, ], 1, function(q) {
+ddcurves2:::.double_tanh_function(z = z_new, beta = q)
+})
+library(pbapply)
+# testing
+py$calc_phi_and_n2(0.15, beta_sample = beta_samples[2, 27, ])
+# turn down whislt testing to avoid bricking session
+# turn back to 1500 when making plots for publication.
+n_samples <- 1500
+results <- lapply(as.list(time_points_of_interest), function(x) {
+pbapply(beta_samples[1:n_samples, x, ], 1, function(q) {
+py$calc_phi_and_n2(a0_const, q)
+})
+n_z <- length(z_new)
+## setup some matricies
+combined_results <- list()
+for (ii in 1:length(time_points_of_interest)) {
+var_name <- paste0("time_point_", as.character(time_points_of_interest[ii]))
+combined_results[[var_name]] <- list(
+bou_freq_mat = matrix(NA, nrow = n_samples, ncol = n_z),
+phi_1_mat = matrix(NA, nrow = n_samples, ncol = n_z),
+phi_2_mat = matrix(NA, nrow = n_samples, ncol = n_z)
+)
+}
+for (ii in 1:length(time_points_of_interest)) {
+for (qq in 1:n_samples) {
+combined_results[[ii]]$bou_freq_mat[qq, ] <- results[[ii]][[qq]]$bou_freq
+combined_results[[ii]]$phi_1_mat[qq, ] <- results[[ii]][[qq]]$phi_1
+combined_results[[ii]]$phi_2_mat[qq, ] <- results[[ii]][[qq]]$phi_2
+}
+combined_results[[ii]]$curve_samples <- t(curve_samples[[ii]])[1:n_samples, ]
+}
+# str(combined_results)
+saveRDS(combined_results, file = paste0("./density-paper-results.rds"))
+res_in <- readRDS("./density-paper-results.rds")
+n_time <- length(res_in)
+times <- unlist(as.numeric(lapply(strsplit(x = names(res_in), split = "_"), getElement, 3)))
+# find a better way to get this
+z_new  <- seq(from = -252.5, to = 0, by = 0.5)
+big_list <- list()
+for (ii in 1:n_time) {
+sub_list <- res_in[[ii]]
+point_df <- data.frame(
+x = Crux_KP150_Phs1$depths,
+y = as.numeric(Crux_KP150_Phs1$density_mat[times[ii], ])
+)
+plot_df <- data.frame(
+x = z_new,
+bou_freq_mean = apply(sub_list$bou_freq_mat, 2, mean),
+bou_freq_lower = apply(sub_list$bou_freq_mat, 2, quantile, 0.025),
+bou_freq_upper = apply(sub_list$bou_freq_mat, 2, quantile, 0.975),
+phi_1_mean = apply(sub_list$phi_1_mat, 2, mean),
+phi_1_lower = apply(sub_list$phi_1_mat, 2, quantile, 0.025),
+phi_1_upper = apply(sub_list$phi_1_mat, 2, quantile, 0.975),
+phi_2_mean = apply(sub_list$phi_2_mat, 2, mean),
+phi_2_lower = apply(sub_list$phi_2_mat, 2, quantile, 0.025),
+phi_2_upper = apply(sub_list$phi_2_mat, 2, quantile, 0.975),
+curve_mean = apply(sub_list$curve_samples, 2, mean),
+curve_lower = apply(sub_list$curve_samples, 2, quantile, 0.025),
+curve_upper = apply(sub_list$curve_samples, 2, quantile, 0.975)
+)
+g_legend <- function(a.gplot) {
+tmp <- ggplot_gtable(ggplot_build(a.gplot))
+leg <- which(sapply(tmp$grobs, function(x)
+x$name) == "guide-box")
+legend <- tmp$grobs[[leg]]
+return(legend)
+}
+dens_plot <- ggplot(data = plot_df) +
+geom_point(data = point_df, aes(x = x, y = y)) +
+geom_line(aes(x = x, y = curve_mean, lty = "Posterior Mean")) +
+geom_ribbon(aes(x = x, ymin = curve_lower, ymax = curve_upper), alpha = 0.25) +
+theme_bw() +
+scale_linetype_manual(name = "Curve type", values = c("Posterior Mean" = "solid", "Minimum RSS" = "dashed")) +
+theme(legend.position = "bottom") +
+ylab(expression(Water ~ Density ~ (kg/m^{3}))) + # TODO: GET UNITS OFF MATT?
+xlab("Depth (m)") +
+scale_y_continuous(limits = c(1020, 1027)) +
+coord_flip()
+global_legend  <- g_legend(dens_plot)
+dens_plot <- dens_plot + theme(legend.position = "none")
+inset_df <- plot_df %>%
+filter(x >= -50)
+# just for drawing the rectangle
+width_of_rect <- 0.725
+inset_rect <- data.frame(
+x_min = -50, x_max = 0,
+y_min = mean(inset_df$curve_mean) - width_of_rect, y_max = mean(inset_df$curve_mean) + width_of_rect
+)
+inset_point_df <- point_df %>%
+filter(x >= -50)
+inset_plot <- ggplot(data = inset_df) +
+geom_point(data = inset_point_df, aes(x = x, y = y)) +
+geom_line(aes(x = x, y = curve_mean)) +
+# geom_line(aes(x = x, y = rss_fit), lty = "dashed", alpha = 0.7) +
+geom_ribbon(aes(x = x, ymin = curve_lower, ymax = curve_upper), alpha = 0.25) +
+theme_bw() +
+coord_flip() +
+theme(
+panel.grid = element_blank(),
+axis.ticks = element_blank(),
+axis.text = element_blank(),
+axis.title = element_blank(),
+axis.ticks.length = unit(0, "pt")
+) +
+scale_y_continuous(limits = c(inset_rect$y_min, inset_rect$y_max))
+dens_plot <- dens_plot +
+geom_rect(
+data = inset_rect,
+aes(xmin = x_min,
+xmax = x_max,
+ymin = y_min,
+ymax = y_max),
+alpha = 0,
+size = 1,
+linetype = 1,
+colour = "grey"
+)
+dens_plot <- dens_plot + annotation_custom(
+ggplotify::as.grob(inset_plot),
+xmin = -250,
+xmax = -150,
+ymin = 1020,
+ymax = 1024
+)
+# colour legend location
+x_legend_location <- 0.225
+y_legend_location <- 0.85
+if (ii == 2) {
+y_legend_location <- 0.25
+}
+phi_plot <- ggplot(data = plot_df) +
+geom_line(aes(x = x, y = phi_1_mean, colour = "First"), size = 1.1) +
+geom_ribbon(aes(x = x, ymin = phi_1_lower, ymax = phi_1_upper), alpha = 0.25) +
+geom_line(aes(x = x, y = phi_2_mean, colour = "Second"), size = 1.1) +
+geom_ribbon(aes(x = x, ymin = phi_2_lower, ymax = phi_2_upper), alpha = 0.25) +
+theme_bw() +
+scale_colour_manual(name = "Mode", values = c("First" = "Red", "Second" = "Blue")) +
+theme(legend.position = c(x_legend_location, y_legend_location), legend.background = element_rect(fill = alpha('white', 0))) +
+ylab(expression(Vertical ~ Structure ~ Function ~ phi~(z))) +
+scale_y_continuous(limits = c(-1, 1)) +
+xlab("Depth (m)") +
+coord_flip()
+bou_freq_plot <- ggplot(data = plot_df) +
+geom_line(aes(x = x, y = bou_freq_mean, lty = "Posterior Mean")) +
+geom_ribbon(aes(x = x, ymin = bou_freq_lower, ymax = bou_freq_upper), alpha = 0.25) +
+theme_bw() +
+scale_linetype_manual(name = "Curve type", values = c("Posterior Mean" = "solid", "Minimum RSS" = "dashed")) +
+theme(legend.position = "none") +
+ylab(expression("Squared Buoyancy Frequency" ~ N^{2} ~ (s^{-2}))) +
+xlab("Depth (m)") +
+scale_y_continuous(limits = c(0, 5e-4)) +
+coord_flip()
+g_table <- arrangeGrob(dens_plot, bou_freq_plot, phi_plot, nrow = 1)
+big_list[[ii]] <- list(dens_plot, bou_freq_plot, phi_plot)
+pdf(file = paste0("../time-point-", as.character(times[ii]), "-all-plots.pdf"), width = 11, height = 5)
+print(grid.arrange(g_table, global_legend, nrow = 2, heights = c(14, 1)))
+dev.off()
+}
+pdf(file = dated_filename("combo-plot.pdf"), width = 12, height = 18)
+print(
+grid.arrange(arrangeGrob(
+big_list[[1]][[1]],
+big_list[[1]][[2]],
+big_list[[1]][[3]],
+big_list[[2]][[1]],
+big_list[[2]][[2]],
+big_list[[2]][[3]],
+big_list[[3]][[1]],
+big_list[[3]][[2]],
+big_list[[3]][[3]],
+nrow =  3
+))
+)
+dev.off()
+getwd()
+res_in <- readRDS("./density-paper-results.rds")
+n_time <- length(res_in)
+times <- unlist(as.numeric(lapply(strsplit(x = names(res_in), split = "_"), getElement, 3)))
+# find a better way to get this
+z_new  <- seq(from = -252.5, to = 0, by = 0.5)
+big_list <- list()
+for (ii in 1:n_time) {
+sub_list <- res_in[[ii]]
+point_df <- data.frame(
+x = Crux_KP150_Phs1$depths,
+y = as.numeric(Crux_KP150_Phs1$density_mat[times[ii], ])
+)
+plot_df <- data.frame(
+x = z_new,
+bou_freq_mean = apply(sub_list$bou_freq_mat, 2, mean),
+bou_freq_lower = apply(sub_list$bou_freq_mat, 2, quantile, 0.025),
+bou_freq_upper = apply(sub_list$bou_freq_mat, 2, quantile, 0.975),
+phi_1_mean = apply(sub_list$phi_1_mat, 2, mean),
+phi_1_lower = apply(sub_list$phi_1_mat, 2, quantile, 0.025),
+phi_1_upper = apply(sub_list$phi_1_mat, 2, quantile, 0.975),
+phi_2_mean = apply(sub_list$phi_2_mat, 2, mean),
+phi_2_lower = apply(sub_list$phi_2_mat, 2, quantile, 0.025),
+phi_2_upper = apply(sub_list$phi_2_mat, 2, quantile, 0.975),
+curve_mean = apply(sub_list$curve_samples, 2, mean),
+curve_lower = apply(sub_list$curve_samples, 2, quantile, 0.025),
+curve_upper = apply(sub_list$curve_samples, 2, quantile, 0.975)
+)
+g_legend <- function(a.gplot) {
+tmp <- ggplot_gtable(ggplot_build(a.gplot))
+leg <- which(sapply(tmp$grobs, function(x)
+x$name) == "guide-box")
+legend <- tmp$grobs[[leg]]
+return(legend)
+}
+dens_plot <- ggplot(data = plot_df) +
+geom_point(data = point_df, aes(x = x, y = y)) +
+geom_line(aes(x = x, y = curve_mean, lty = "Posterior Mean")) +
+geom_ribbon(aes(x = x, ymin = curve_lower, ymax = curve_upper), alpha = 0.25) +
+theme_bw() +
+scale_linetype_manual(name = "Curve type", values = c("Posterior Mean" = "solid", "Minimum RSS" = "dashed")) +
+theme(legend.position = "bottom") +
+ylab(expression(Water ~ Density ~ (kg/m^{3}))) + # TODO: GET UNITS OFF MATT?
+xlab("Depth (m)") +
+scale_y_continuous(limits = c(1020, 1027)) +
+coord_flip()
+global_legend  <- g_legend(dens_plot)
+dens_plot <- dens_plot + theme(legend.position = "none")
+inset_df <- plot_df %>%
+filter(x >= -50)
+# just for drawing the rectangle
+width_of_rect <- 0.725
+inset_rect <- data.frame(
+x_min = -50, x_max = 0,
+y_min = mean(inset_df$curve_mean) - width_of_rect, y_max = mean(inset_df$curve_mean) + width_of_rect
+)
+inset_point_df <- point_df %>%
+filter(x >= -50)
+inset_plot <- ggplot(data = inset_df) +
+geom_point(data = inset_point_df, aes(x = x, y = y)) +
+geom_line(aes(x = x, y = curve_mean)) +
+# geom_line(aes(x = x, y = rss_fit), lty = "dashed", alpha = 0.7) +
+geom_ribbon(aes(x = x, ymin = curve_lower, ymax = curve_upper), alpha = 0.25) +
+theme_bw() +
+coord_flip() +
+theme(
+panel.grid = element_blank(),
+axis.ticks = element_blank(),
+axis.text = element_blank(),
+axis.title = element_blank(),
+axis.ticks.length = unit(0, "pt")
+) +
+scale_y_continuous(limits = c(inset_rect$y_min, inset_rect$y_max))
+dens_plot <- dens_plot +
+geom_rect(
+data = inset_rect,
+aes(xmin = x_min,
+xmax = x_max,
+ymin = y_min,
+ymax = y_max),
+alpha = 0,
+size = 1,
+linetype = 1,
+colour = "grey"
+)
+dens_plot <- dens_plot + annotation_custom(
+ggplotify::as.grob(inset_plot),
+xmin = -250,
+xmax = -150,
+ymin = 1020,
+ymax = 1024
+)
+# colour legend location
+x_legend_location <- 0.225
+y_legend_location <- 0.85
+if (ii == 2) {
+y_legend_location <- 0.25
+}
+phi_plot <- ggplot(data = plot_df) +
+geom_line(aes(x = x, y = phi_1_mean, colour = "First"), size = 1.1) +
+geom_ribbon(aes(x = x, ymin = phi_1_lower, ymax = phi_1_upper), alpha = 0.25) +
+geom_line(aes(x = x, y = phi_2_mean, colour = "Second"), size = 1.1) +
+geom_ribbon(aes(x = x, ymin = phi_2_lower, ymax = phi_2_upper), alpha = 0.25) +
+theme_bw() +
+scale_colour_manual(name = "Mode", values = c("First" = "Red", "Second" = "Blue")) +
+theme(legend.position = c(x_legend_location, y_legend_location), legend.background = element_rect(fill = alpha('white', 0))) +
+ylab(expression(Vertical ~ Structure ~ Function ~ phi~(z))) +
+scale_y_continuous(limits = c(-1, 1)) +
+xlab("Depth (m)") +
+coord_flip()
+bou_freq_plot <- ggplot(data = plot_df) +
+geom_line(aes(x = x, y = bou_freq_mean, lty = "Posterior Mean")) +
+geom_ribbon(aes(x = x, ymin = bou_freq_lower, ymax = bou_freq_upper), alpha = 0.25) +
+theme_bw() +
+scale_linetype_manual(name = "Curve type", values = c("Posterior Mean" = "solid", "Minimum RSS" = "dashed")) +
+theme(legend.position = "none") +
+ylab(expression("Squared Buoyancy Frequency" ~ N^{2} ~ (s^{-2}))) +
+xlab("Depth (m)") +
+scale_y_continuous(limits = c(0, 5e-4)) +
+coord_flip()
+g_table <- arrangeGrob(dens_plot, bou_freq_plot, phi_plot, nrow = 1)
+big_list[[ii]] <- list(dens_plot, bou_freq_plot, phi_plot)
+pdf(file = paste0("./time-point-", as.character(times[ii]), "-all-plots.pdf"), width = 11, height = 5)
+print(grid.arrange(g_table, global_legend, nrow = 2, heights = c(14, 1)))
+dev.off()
+}
+pdf(file = dated_filename("combo-plot.pdf", folder_path = "./"), width = 12, height = 18)
+print(
+grid.arrange(arrangeGrob(
+big_list[[1]][[1]],
+big_list[[1]][[2]],
+big_list[[1]][[3]],
+big_list[[2]][[1]],
+big_list[[2]][[2]],
+big_list[[2]][[3]],
+big_list[[3]][[1]],
+big_list[[3]][[2]],
+big_list[[3]][[3]],
+nrow =  3
+))
+)
+dev.off()

@@ -5,9 +5,6 @@
 # Session Data files
 .RData
 
-# Example code in package build process
-*-Ex.R
-
 # Output files from R CMD build
 /*.tar.gz
 
@@ -34,3 +31,14 @@ vignettes/*.pdf
 
 # Shiny token, see https://shiny.rstudio.com/articles/shinyapps.html
 rsconnect/
+
+# 3/08/2018 2:07:08 PM
+# ignore .ini files that appear due to this living in a google drive folder
+*.ini
+
+# ignore ./data/, there is nothing in there that is useful
+/data/
+
+*.rds
+*.h5
+*.jar
