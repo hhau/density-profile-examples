@@ -42,3 +42,7 @@ rsconnect/
 *.rds
 *.h5
 *.jar
+
+Example/_Rhistory
+*_Rhistory
+*.tex
