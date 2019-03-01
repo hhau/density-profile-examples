@@ -120,14 +120,14 @@ init_sub_one <- list(
 
 model_fit_one <- double_tanh_no_timeseries(
   stan_data_list = stan_dat_one,
-  iter = 2500,
-  warmup = 2000,
+  iter = 1500,
+  warmup = 1000,
   save_warmup = FALSE,
   chains = 3,
   cores = 3,
   refresh = 25,
   control = list(adapt_delta = 0.95, max_treedepth = 16, stepsize = 1e-6),
-  init = list(init_sub_one, init_sub_one, init_sub_one)
+  init = list(init_sub_one, init_jitter(init_sub_one), init_jitter(init_sub_one))
 )
 saveRDS(model_fit_one, file = "model-fit-one.rds")
 ```
@@ -168,7 +168,7 @@ model_fit_two <- double_tanh_no_timeseries(
   cores = 3,
   refresh = 25,
   control = list(adapt_delta = 0.95, max_treedepth = 16, stepsize = 1e-6),
-  init = list(init_sub_two, init_sub_two, init_sub_two)
+  init = list(init_sub_two, init_jitter(init_sub_two), init_jitter(init_sub_two))
 )
 saveRDS(model_fit_two, file = "model-fit-two.rds")
 ```
